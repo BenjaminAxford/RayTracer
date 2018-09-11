@@ -19,7 +19,9 @@
 
 #include "Vec3.hpp"
 #include "material.hpp"
+#include "SceneObject.hpp"
 #include "Sphere.hpp"
+#include "Triangle.hpp"
 
 #define MAX_RAY_DEPTH 5
 
@@ -52,11 +54,6 @@ public:
 
 
 
-class SceneObject
-{
-public:
-
-};
 
 
 
@@ -68,32 +65,32 @@ float mix(const float &a, const float &b, const float &mix)
 Vec3f trace(
 	const Vec3f &rayorig,
 	const Vec3f &raydir,
-	const std::vector<Sphere> &spheres,
+	const std::vector<SceneObject*> &scene,
 	const int &depth)
 {
 	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
 	float tnear = INFINITY;
-	const Sphere* sphere = NULL;
+	const SceneObject* sceneobject = NULL;
 	// find intersection of this ray with the sphere in the scene
-	for (unsigned i = 0; i < spheres.size(); ++i) {
-		float t0 = INFINITY, t1 = INFINITY;
-		if (spheres[i].intersect(rayorig, raydir, t0, t1)) {
+	for (unsigned i = 0; i < scene.size(); ++i) {
+		float t0 = INFINITY, t1 = INFINITY, t2 = INFINITY;
+		if (scene[i]->intersect(rayorig, raydir, t0, t1, t2)) {
 			if (t0 < 0) t0 = t1;
 			if (t0 < tnear) {
 				tnear = t0;
-				sphere = &spheres[i];
+				sceneobject = scene[i];
 			}
 		}
 	}
 	// if there's no intersection return black or background color
-	if (!sphere) return Vec3f(2);
+	if (!sceneobject) return Vec3f(2);
 
 	// Just return surface colour for now
-	//return(sphere->surfaceColor);
+	return(sceneobject->surfaceColor);
 
 	Vec3f surfaceColor = 0; // color of the ray/surfaceof the object intersected by the ray 
 	Vec3f phit = rayorig + raydir * tnear; // point of intersection 
-	Vec3f nhit = phit - sphere->center; // normal at the intersection point 
+	Vec3f nhit = phit - sceneobject->center; // normal at the intersection point 
 	nhit.normalize(); // normalize normal direction 
 					  // If the normal and the view direction are not opposite to each other
 					  // reverse the normal direction. That also means we are inside the sphere so set
@@ -102,7 +99,7 @@ Vec3f trace(
 	float bias = 1e-4; // add some bias to the point from which we will be tracing 
 	bool inside = false;
 	if (raydir.dot(nhit) > 0) nhit = -nhit, inside = true;
-	if ((sphere->transparency > 0 || sphere->reflection > 0) && depth < MAX_RAY_DEPTH) {
+	if ((sceneobject->transparency > 0 || sceneobject->reflection > 0) && depth < MAX_RAY_DEPTH) {
 		float facingratio = -raydir.dot(nhit);
 		// change the mix value to tweak the effect
 		float fresneleffect = mix(pow(1 - facingratio, 3), 1, 0.1);
@@ -110,52 +107,64 @@ Vec3f trace(
 		// are already normalized)
 		Vec3f refldir = raydir - nhit * 2 * raydir.dot(nhit);
 		refldir.normalize();
-		Vec3f reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1);
+		Vec3f reflection = trace(phit + nhit * bias, refldir, scene, depth + 1);
 		Vec3f refraction = 0;
 		// if the sphere is also transparent compute refraction ray (transmission)
-		if (sphere->transparency > 0) {
+		if (sceneobject->transparency > 0) {
 			float ior = 1.1, eta = (inside) ? ior : 1 / ior; // are we inside or outside the surface? 
 			float cosi = -nhit.dot(raydir);
 			float k = 1 - eta * eta * (1 - cosi * cosi);
 			Vec3f refrdir = raydir * eta + nhit * (eta *  cosi - sqrt(k));
 			refrdir.normalize();
-			refraction = trace(phit - nhit * bias, refrdir, spheres, depth + 1);
+			refraction = trace(phit - nhit * bias, refrdir, scene, depth + 1);
 		}
 		// the result is a mix of reflection and refraction (if the sphere is transparent)
 		surfaceColor = (
-			reflection * fresneleffect * sphere->reflection +
-			refraction * (1 - fresneleffect) * sphere->transparency) * sphere->surfaceColor;
+			reflection * fresneleffect * sceneobject->reflection +
+			refraction * (1 - fresneleffect) * sceneobject->transparency) * sceneobject->surfaceColor;
 	}
 	else {
 		// it's a diffuse object, no need to raytrace any further
-		for (unsigned i = 0; i < spheres.size(); ++i) {
-			if (spheres[i].emissionColor.x > 0) {
+		for (unsigned i = 0; i < scene.size(); ++i) {
+			if (scene[i]->emissionColor.x > 0) {
 				// this is a light
-				Vec3f transmission = 1;
-				Vec3f lightDirection = spheres[i].center - phit;
+				Vec3f transmission = 0;
+				Vec3f lightDirection = scene[i]->center - phit;
 				lightDirection.normalize();
-				for (unsigned j = 0; j < spheres.size(); ++j) {
+				for (unsigned j = 0; j < scene.size(); ++j) {
 					if (i != j) {
-						float t0, t1;
-						if (spheres[j].intersect(phit + nhit * bias, lightDirection, t0, t1)) {
-							transmission = 0;
+						float t0, t1, t2;
+						if (scene[j]->intersect(phit + nhit * bias, lightDirection, t0, t1, t2)) {
+							transmission = 1;
 							break;
 						}
 					}
 				}
-				surfaceColor += sphere->surfaceColor * transmission *
-					std::max(float(0), nhit.dot(lightDirection)) * spheres[i].emissionColor;
+
+
+
+				surfaceColor += sceneobject->surfaceColor * transmission *
+					std::max(float(0), nhit.dot(lightDirection)) * scene[i]->emissionColor;
+
 			}
 		}
+		//Vec3f reflection(0);
+
+		//if (depth < MAX_RAY_DEPTH) {
+		//	Vec3f refldir = raydir - nhit * 2 * raydir.dot(nhit);
+		//	refldir.normalize();
+		//	reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1);
+		//}
+		////surfaceColor += reflection * 0.1;
 	}
 
-	return surfaceColor + sphere->emissionColor;
+	return surfaceColor + sceneobject->emissionColor;
 }
 
 void threadedTrace(
 	int id,
 	const Vec3f &rayorig,
-	const std::vector<Sphere> &spheres,
+	const std::vector<SceneObject*> &scene,
 	const int &depth,
 	char* pixels,
 	std::atomic<int>* totalrays,
@@ -169,7 +178,7 @@ void threadedTrace(
 {
 
 	float invWidth = 1 / float(width), invHeight = 1 / float(height);
-	float fov = 45, aspectratio = width / float(height);
+	float fov = 70, aspectratio = width / float(height);
 	float angle = tan(M_PI * 0.5 * fov / 180.);
 
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
@@ -212,14 +221,15 @@ void threadedTrace(
 			Vec3f raydir(xx, yy, -1);
 			raydir.normalize();
 
-			Vec3f rotation = Vec3f(1, 1, -1);
+			Vec3f rotation = Vec3f(0, -0.142612, 0);
 			//rotation = Vec3f(0, 0, -1).normalize();
-			//raydir *= rotation;
+			raydir += rotation;
 
 
 
 			//Vec3f traceresult = trace(Vec3f(50 + sin(float(totalframes) / 100) * 100, 273 + sin(float(totalframes)/100)*100, -10000), raydir, spheres, 0);
-			Vec3f traceresult = trace(Vec3f(sin(float(totalframes) / 250) * 50, 0, 200 + cos(float(totalframes) / 250) * 50    /* - (totalframes * 1)*/), raydir, spheres, 0);
+			Vec3f traceresult = trace(Vec3f(sin(float(totalframes) / 250) * 50, 52, 295.6 + cos(float(totalframes) / 250) * 50    /* - (totalframes * 1)*/), raydir, scene, 0);
+			//Vec3f traceresult = trace(Vec3f(0, 52, 295.6), raydir, spheres, 0);
 
 			//// Draw edge lines for each tile
 			//if (tiley == tilesi * tileheight)
@@ -252,13 +262,13 @@ void threadedTrace(
 
 }
 
-void render(const std::vector<Sphere> &spheres)
+void render(const std::vector<SceneObject*> &scene)
 {
 	// Setup threadpool
 	ctpl::thread_pool p(2 /* two threads in the pool */);
 
 	// Setup tracing properties
-	unsigned width = 250, height = 250;
+	unsigned width = 1024, height = 768;
 	Vec3f *image = new Vec3f[width * height], *pixel = image;
 	float invWidth = 1 / float(width), invHeight = 1 / float(height);
 	float fov = 45, aspectratio = width / float(height);
@@ -319,7 +329,7 @@ void render(const std::vector<Sphere> &spheres)
 					int gridx = spiralgrid.x + tiles / 2 - gridoffset;
 					int gridy = spiralgrid.y + tiles / 2 - gridoffset;
 
-					p.push(threadedTrace, Vec3f(0, sin(float(totalframes) / 250), 0), spheres, 0, pixels, totalrays, totalframes, width, height, raysperbatch, tiles, gridx, gridy);
+					p.push(threadedTrace, Vec3f(0, sin(float(totalframes) / 250), 0), scene, 0, pixels, totalrays, totalframes, width, height, raysperbatch, tiles, gridx, gridy);
 
 					spiralgrid.goNext();
 				}
@@ -391,6 +401,8 @@ int main(int argc, char *args[])
 {
 	srand(13);
 	std::vector<Sphere> spheres;
+	std::vector<SceneObject*> scene;
+
 	// position, radius, surface color, reflectivity, transparency, emission color
 	//spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0.9, 0.0, Vec3f(0.0)));
 	//spheres.push_back(Sphere(Vec3f(50, -1e5 + 81.6, 81.6), 1e5, Vec3f(0.20, 0.20, 0.20), 0.0, 0.0, Vec3f(0.0)));
@@ -410,20 +422,25 @@ int main(int argc, char *args[])
 
 	// Camera is at Vec3f(50, 273, -10000)
 
-	spheres.push_back(Sphere(Vec3f(-1e5 - 50, 40.8, 81.6), 1e5, Vec3f(0.75, 0.25, 0.25), 0, 0.0, Vec3f(1.0, 0, 0))); // Left
-	spheres.push_back(Sphere(Vec3f(1e5 + 50, 40.8, 81.6), 1e5, Vec3f(0.25, 0.25, 0.75), 0, 0.0, Vec3f(0.0))); // Right
-	spheres.push_back(Sphere(Vec3f(0, 40.8, -1e5 - 81.6), 1e5, Vec3f(0.25, 0.25, 0.25), 0, 0.0, Vec3f(0.0))); // Back
-	spheres.push_back(Sphere(Vec3f(0, 40.8, 1e5 + 81.6), 1e5, Vec3f(0.75, 0.75, 0.75), 0, 0.0, Vec3f(0.0))); // Front
-	spheres.push_back(Sphere(Vec3f(0, 1e5 + 81.6, 81.6), 1e5, Vec3f(0.75, 0.25, 0.75), 0, 0.0, Vec3f(0.0, 1.0, 0.0))); // Top
-	spheres.push_back(Sphere(Vec3f(0, -1e5 - 40.8, 81.6), 1e5, Vec3f(0.75, 0.75, 0.25), 0, 0.0, Vec3f(0, 0, 0))); // Bottom
+	scene.push_back(new Sphere(Vec3f(-1e5 - 100, 40.8, 81.6), 1e5, Vec3f(0.75, 0.25, 0.25), 0, 0.0, Vec3f(0.0, 0, 0))); // Left
+	scene.push_back(new Sphere(Vec3f(1e5 + 100, 40.8, 81.6), 1e5, Vec3f(0.25, 0.25, 0.75), 0, 0.0, Vec3f(0.0))); // Right
+	scene.push_back(new Sphere(Vec3f(0, 40.8, -1e5 - 81.6), 1e5, Vec3f(0.25, 0.25, 0.25), 0, 0.0, Vec3f(0.0))); // Back
+	scene.push_back(new Sphere(Vec3f(0, 40.8, 1e5 + 81.6), 1e5, Vec3f(0.75, 0.75, 0.75), 0, 0.0, Vec3f(0.0))); // Front
+	scene.push_back(new Sphere(Vec3f(0, 1e5 + 120.6, 81.6), 1e5, Vec3f(0.75, 0.25, 0.75), 0, 0.0, Vec3f(0.0, 0.0, 0.0))); // Top
+	scene.push_back(new Sphere(Vec3f(0, -1e5 - 60.8, 81.6), 1e5, Vec3f(0.75, 0.75, 0.25), 0, 0.0, Vec3f(0, 0, 0))); // Bottom
 
 	// Spheres in box
-	spheres.push_back(Sphere(Vec3f(0, 40.8, 40.8), 10, Vec3f(1.0, 1.0, 1.0), 1, 0.0, Vec3f(0.0))); // Mirror
-	spheres.push_back(Sphere(Vec3f(-40, 10.8, 40.8), 10, Vec3f(1.0, 1.0, 1.0), 1, 0.9, Vec3f(0.0))); // Glass
+	scene.push_back(new Sphere(Vec3f(-50, 16.5, 77), 0.0000001, Vec3f(1.0, 1.0, 1.0), 1.0, 0.0, Vec3f(0.0), Material())); // Mirror
+	//spheres.push_back(Sphere(Vec3f(50, 16.5, 78), 4.5, Vec3f(1.0, 1.0, 1.0), 0, 1, Vec3f(0.0), Material())); // Glass
 
-	spheres.push_back(Sphere(Vec3f(0, 81.6, 40.8), 10, Vec3f(0.0, 0.0, 0.0), 1, 0.0, Vec3f(120))); // Light
+	scene.push_back(new Sphere(Vec3f(0, 81.6, 50), 5, Vec3f(0.0, 0.0, 0.0), 0, 0, Vec3f(3, 3, 3))); // Light
 
-	render(spheres);
+	// Triangle
+	//scene.push_back(new Triangle(Vec3f(0, 81.6, 50), Vec3f(10, 81.6, 50), Vec3f(5, 51.6, 50), Vec3f(0.0, 0.0, 0.0), 0, 0, Vec3f(3, 3, 3)));
+
+
+
+	render(scene);
 
 	return 0;
 }

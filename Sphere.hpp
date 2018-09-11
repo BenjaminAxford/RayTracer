@@ -2,10 +2,10 @@
 #include "Vec3.hpp"
 #include "Material.hpp"
 
-class Sphere
+class Sphere : public SceneObject
 {
 public:
-	Vec3f center;                           /// position of the sphere 
+	/// position of the sphere 
 	float radius, radius2;                  /// sphere radius and radius^2 
 	Vec3f surfaceColor, emissionColor;      /// surface color and emission (light) 
 	float transparency, reflection;         /// surface transparency and reflectivity 
@@ -17,13 +17,20 @@ public:
 		const float &refl = 0,
 		const float &transp = 1.0,
 		const Vec3f &ec = 0,
-		const Material &mat = Material()):
-		center(c), radius(r), surfaceColor(sc), emissionColor(ec),
-		transparency(transp), reflection(refl), radius2(r * r), material(mat)
-	{ /* empty */
+		const Material &mat = Material())
+	{
+		center = c;
+		radius = r;
+		surfaceColor = sc;
+		emissionColor = ec;
+		transparency = transp;
+		reflection = refl;
+		radius2 = r * r;
+		material = mat;
 	}
+
 	//Compute a ray - sphere intersection using the geometric solution
-	bool intersect(const Vec3f &rayorig, const Vec3f &raydir, float &t0, float &t1) const
+	bool intersect(const Vec3f &rayorig, const Vec3f &raydir, float &t0, float &t1, float &v) const
 	{
 		Vec3f l = center - rayorig;
 		float tca = l.dot(raydir);

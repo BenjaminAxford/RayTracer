@@ -154,9 +154,11 @@
     <ClInclude Include="ctpl_stl.h" />
     <ClInclude Include="Material.hpp" />
     <ClInclude Include="Metal.hpp" />
+    <ClInclude Include="SceneObject.hpp" />
     <ClInclude Include="Sphere.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Triangle.hpp" />
     <ClInclude Include="Vec3.hpp" />
   </ItemGroup>
   <ItemGroup>

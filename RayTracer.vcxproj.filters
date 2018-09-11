@@ -36,6 +36,12 @@
     <ClInclude Include="Metal.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Triangle.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneObject.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
