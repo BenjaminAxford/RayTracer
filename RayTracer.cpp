@@ -85,8 +85,10 @@ Vec3f trace(
 	// if there's no intersection return black or background color
 	if (!sceneobject) return Vec3f(2);
 
+	/*std::cout << "Surface Colour: " << sceneobject->surfaceColor << std::endl;*/
+
 	// Just return surface colour for now
-	return(sceneobject->surfaceColor);
+	//return(sceneobject->surfaceColor);
 
 	Vec3f surfaceColor = 0; // color of the ray/surfaceof the object intersected by the ray 
 	Vec3f phit = rayorig + raydir * tnear; // point of intersection 
@@ -192,7 +194,6 @@ void threadedTrace(
 	float tileheight = (float)height / (float)tiles;
 
 
-
 	//unsigned test = tilex + tiley;
 
 	unsigned pixelsprocessed = 0;
@@ -224,6 +225,8 @@ void threadedTrace(
 			Vec3f rotation = Vec3f(0, -0.142612, 0);
 			//rotation = Vec3f(0, 0, -1).normalize();
 			raydir += rotation;
+
+
 
 
 
@@ -400,44 +403,25 @@ void render(const std::vector<SceneObject*> &scene)
 int main(int argc, char *args[])
 {
 	srand(13);
-	std::vector<Sphere> spheres;
 	std::vector<SceneObject*> scene;
-
-	// position, radius, surface color, reflectivity, transparency, emission color
-	//spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0.9, 0.0, Vec3f(0.0)));
-	//spheres.push_back(Sphere(Vec3f(50, -1e5 + 81.6, 81.6), 1e5, Vec3f(0.20, 0.20, 0.20), 0.0, 0.0, Vec3f(0.0)));
-
-	//spheres.push_back(Sphere(Vec3f(0, 0, -20), 4, Vec3f(0.25), 0.1, 1.05, Vec3f(0.0)));
-
-	//spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0, Vec3f(0.0)));
-	//spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0, Vec3f(0.0)));
-	//spheres.push_back(Sphere(Vec3f(-5.5, 0, -15), 3, Vec3f(0.90, 0.90, 0.90), 1, 0.0, Vec3f(0.0)));
-
-	////// light
-	////spheres.push_back(Sphere(Vec3f(10.0, 20, -30), 3, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Vec3f(3)));
-	//spheres.push_back(Sphere(Vec3f(10, 2, 10), 0.5, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Vec3f(3)));
-
-
-
 
 	// Camera is at Vec3f(50, 273, -10000)
 
-	scene.push_back(new Sphere(Vec3f(-1e5 - 100, 40.8, 81.6), 1e5, Vec3f(0.75, 0.25, 0.25), 0, 0.0, Vec3f(0.0, 0, 0))); // Left
-	scene.push_back(new Sphere(Vec3f(1e5 + 100, 40.8, 81.6), 1e5, Vec3f(0.25, 0.25, 0.75), 0, 0.0, Vec3f(0.0))); // Right
-	scene.push_back(new Sphere(Vec3f(0, 40.8, -1e5 - 81.6), 1e5, Vec3f(0.25, 0.25, 0.25), 0, 0.0, Vec3f(0.0))); // Back
+	scene.push_back(new Sphere(Vec3f(-1e5 - 100, 40.8, 81.6), 1e5, Vec3f(0.75, 0.25, 0.25), 0, 0.0, Vec3f(0))); // Left
+	scene.push_back(new Sphere(Vec3f(1e5 + 100, 40.8, 81.6), 1e5, Vec3f(0.25, 0.25, 0.75), 0, 0.0, Vec3f(0))); // Right
+	scene.push_back(new Sphere(Vec3f(0, 40.8, -1e5 - 81.6), 1e5, Vec3f(0.25, 0.25, 0.25), 1.0, 0.0, Vec3f(0.0))); // Back
 	scene.push_back(new Sphere(Vec3f(0, 40.8, 1e5 + 81.6), 1e5, Vec3f(0.75, 0.75, 0.75), 0, 0.0, Vec3f(0.0))); // Front
 	scene.push_back(new Sphere(Vec3f(0, 1e5 + 120.6, 81.6), 1e5, Vec3f(0.75, 0.25, 0.75), 0, 0.0, Vec3f(0.0, 0.0, 0.0))); // Top
 	scene.push_back(new Sphere(Vec3f(0, -1e5 - 60.8, 81.6), 1e5, Vec3f(0.75, 0.75, 0.25), 0, 0.0, Vec3f(0, 0, 0))); // Bottom
 
 	// Spheres in box
-	scene.push_back(new Sphere(Vec3f(-50, 16.5, 77), 0.0000001, Vec3f(1.0, 1.0, 1.0), 1.0, 0.0, Vec3f(0.0), Material())); // Mirror
-	//spheres.push_back(Sphere(Vec3f(50, 16.5, 78), 4.5, Vec3f(1.0, 1.0, 1.0), 0, 1, Vec3f(0.0), Material())); // Glass
+	scene.push_back(new Sphere(Vec3f(-50, 16.5, 77), 1, Vec3f(1.0, 1.0, 1.0), 1.0, 0.0, Vec3f(0.0), Material())); // Mirror
+	scene.push_back(new Sphere(Vec3f(50, 16.5, 78), 4.5, Vec3f(1.0, 1.0, 1.0), 0, 1, Vec3f(0.0), Material())); // Glass
 
-	scene.push_back(new Sphere(Vec3f(0, 81.6, 50), 5, Vec3f(0.0, 0.0, 0.0), 0, 0, Vec3f(3, 3, 3))); // Light
+	scene.push_back(new Sphere(Vec3f(0, 80.6, 50), 1, Vec3f(1.0, 1.0, 1.0), 1.0, 0, Vec3f(1, 1, 1))); // Light
 
 	// Triangle
-	//scene.push_back(new Triangle(Vec3f(0, 81.6, 50), Vec3f(10, 81.6, 50), Vec3f(5, 51.6, 50), Vec3f(0.0, 0.0, 0.0), 0, 0, Vec3f(3, 3, 3)));
-
+	scene.push_back(new Triangle(Vec3f(90, 30, 10), Vec3f(10, 50, -30), Vec3f(10, -30, 70), Vec3f(0.2, 1.0, 0.2), 0, 0, Vec3f(1.0, 1.0, 1.0)));
 
 
 	render(scene);

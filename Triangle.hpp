@@ -35,7 +35,10 @@ public:
 		Vec3f pvec = raydir.crossProduct(ac);
 		float det = ab.dot(pvec);
 
+
+
 		if (det < kEpsilon) return false;
+
 
 		if (fabs(det) < kEpsilon) return false;
 
@@ -43,13 +46,19 @@ public:
 
 		Vec3f tvec = rayorig - a;
 		u = tvec.dot(pvec) * invDet;
+
+
+
 		if (u < 0 || u>1) return false;
+		
 
 		Vec3f qvec = tvec.crossProduct(ab);
 		v = raydir.dot(qvec)*invDet;
-		if (v < 0 || u + v >1) return false;
+		if (v < 0 || (u + v)>1) return false;
 
 		t = ac.dot(qvec)*invDet;
+
+		/*std::cout << t << std::endl;*/
 
 		return true;
 	}

@@ -7,9 +7,6 @@ class Sphere : public SceneObject
 public:
 	/// position of the sphere 
 	float radius, radius2;                  /// sphere radius and radius^2 
-	Vec3f surfaceColor, emissionColor;      /// surface color and emission (light) 
-	float transparency, reflection;         /// surface transparency and reflectivity 
-	Material material;
 	Sphere(
 		const Vec3f &c,
 		const float &r,
